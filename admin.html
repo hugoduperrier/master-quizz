@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord — Le Master Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10192E; --ink-2:#1B2A4A; --coral:#FF5A3C; --lime:#C8FF4D; --slate:#5C6B8A;
+    --paper:#F5F2EA; --paper-2:#EDE8DC; --line:#DAD3C2;
+    --cat-culture:#5B6EE1; --cat-pub:#FF5A3C; --cat-social:#1E9E8B; --cat-marque:#D98A2B; --cat-manager:#8B5CA8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  h1,h2{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em;}
+  header{background:var(--ink);color:#fff;padding:20px 24px;border-bottom:3px solid var(--lime);}
+  header h1{margin:0;font-size:22px;}
+  header p{margin:4px 0 0;color:#B7C0D6;font-size:13px;}
+  main{max-width:1000px;margin:0 auto;padding:24px 20px 80px;}
+
+  #gateScreen{max-width:360px;margin:80px auto;text-align:center;}
+  #gateScreen input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;margin:12px 0;}
+  #gateScreen button{width:100%;padding:10px;border-radius:8px;border:none;background:var(--ink-2);color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:600;cursor:pointer;}
+  #gateError{color:var(--coral);font-size:13px;min-height:18px;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .toolbar .stats{font-size:13.5px;color:var(--slate);}
+  .btn{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:8px;border:1.5px solid var(--ink-2);background:#fff;color:var(--ink-2);cursor:pointer;text-decoration:none;display:inline-block;}
+  .btn.primary{background:var(--ink-2);color:#fff;}
+
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  th,td{padding:10px 12px;text-align:left;font-size:13.5px;border-bottom:1px solid var(--line);}
+  th{background:var(--paper-2);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);}
+  tr.student-row{cursor:pointer;}
+  tr.student-row:hover{background:#FAF8F2;}
+  .pending-flag{color:var(--coral);font-weight:700;font-size:11px;text-transform:uppercase;}
+  .score-cell b{font-family:'Space Grotesk',sans-serif;}
+
+  .detail-panel{display:none;background:#fff;border:1px solid var(--line);border-top:none;padding:18px 20px;}
+  .qblock{padding:14px 0;border-top:1px solid var(--line);}
+  .qblock:first-child{border-top:none;}
+  .qblock-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;}
+  .cat-tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:20px;color:#fff;}
+  .qprompt{font-weight:600;font-size:14.5px;margin:6px 0 4px;}
+  .qanswer{background:var(--paper-2);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-wrap;}
+  .grade-row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
+  .grade-row input[type=number]{width:70px;padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;}
+  .grade-row input[type=text]{flex:1;min-width:180px;padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;}
+  .grade-row button{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid var(--ink-2);background:var(--ink-2);color:#fff;cursor:pointer;}
+  .auto-badge{font-size:11px;font-weight:700;color:#1E7A46;background:#E9F7EE;padding:2px 8px;border-radius:20px;}
+  .manual-badge{font-size:11px;font-weight:700;color:var(--coral);background:#FFECE7;padding:2px 8px;border-radius:20px;}
+</style>
+</head>
+<body>
+
+<div id="gateScreen">
+  <h2>Tableau de bord correcteur</h2>
+  <input type="password" id="adminCodeInput" placeholder="Code correcteur">
+  <button onclick="tryLogin()">Accéder</button>
+  <p id="gateError"></p>
+</div>
+
+<div id="dashboard" style="display:none;">
+  <header>
+    <h1>Le Master Quiz — Tableau de bord</h1>
+    <p>Master Responsable Communication · Rentrée</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <span class="stats" id="statsLine">Chargement…</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="loadSubmissions()">↻ Actualiser</button>
+        <a class="btn primary" id="exportBtn" href="#">⬇ Exporter en CSV</a>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Nom</th><th>Prénom</th><th>Date</th><th>Score</th><th>Statut</th><th></th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </main>
+</div>
+
+<script>
+let ADMIN_CODE = "";
+let submissions = [];
+let expandedId = null;
+
+function tryLogin(){
+  const code = document.getElementById('adminCodeInput').value;
+  fetch('/api/submissions', { headers: { 'x-admin-code': code } })
+    .then(r => {
+      if(!r.ok) throw new Error("bad code");
+      return r.json();
+    })
+    .then(data => {
+      ADMIN_CODE = code;
+      sessionStorage.setItem('mq_admin_code', code);
+      submissions = data;
+      document.getElementById('gateScreen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('exportBtn').href = '/api/export.csv?code=' + encodeURIComponent(code);
+      renderTable();
+    })
+    .catch(() => {
+      document.getElementById('gateError').textContent = "Code incorrect.";
+    });
+}
+
+// auto-login if code already stored in this browser session
+window.addEventListener('load', () => {
+  const saved = sessionStorage.getItem('mq_admin_code');
+  if(saved){
+    document.getElementById('adminCodeInput').value = saved;
+    tryLogin();
+  }
+});
+
+function loadSubmissions(){
+  fetch('/api/submissions', { headers: { 'x-admin-code': ADMIN_CODE } })
+    .then(r => r.json())
+    .then(data => { submissions = data; renderTable(); });
+}
+
+function computeTotal(sub){
+  return Object.values(sub.answers).reduce((s, a) => s + (a.earned || 0), 0);
+}
+function hasPending(sub){
+  return Object.values(sub.answers).some(a => a.needsManualGrade);
+}
+
+function renderTable(){
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+
+  submissions
+    .slice()
+    .sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+    .forEach(sub => {
+      const tr = document.createElement('tr');
+      tr.className = 'student-row';
+      const total = computeTotal(sub);
+      tr.innerHTML = `
+        <td>${sub.lastName}</td>
+        <td>${sub.firstName}</td>
+        <td>${new Date(sub.submittedAt).toLocaleString('fr-FR')}</td>
+        <td class="score-cell"><b>${total}</b> / ${sub.totalMax}</td>
+        <td>${hasPending(sub) ? '<span class="pending-flag">À corriger</span>' : '✓ Complet'}</td>
+        <td>▾</td>`;
+      tr.addEventListener('click', () => toggleDetail(sub.id));
+      tbody.appendChild(tr);
+
+      const detailTr = document.createElement('tr');
+      const detailTd = document.createElement('td');
+      detailTd.colSpan = 6;
+      detailTd.style.padding = '0';
+      const panel = document.createElement('div');
+      panel.className = 'detail-panel';
+      panel.id = 'detail-'+sub.id;
+      if(expandedId === sub.id) panel.style.display = 'block';
+      panel.innerHTML = buildDetailHTML(sub);
+      detailTd.appendChild(panel);
+      detailTr.appendChild(detailTd);
+      tbody.appendChild(detailTr);
+    });
+
+  if(expandedId) attachGradeHandlers(expandedId);
+}
+
+function toggleDetail(id){
+  expandedId = (expandedId === id) ? null : id;
+  renderTable();
+}
+
+const CAT_COLORS = { culture:"var(--cat-culture)", pub:"var(--cat-pub)", social:"var(--cat-social)", marque:"var(--cat-marque)", manager:"var(--cat-manager)" };
+
+function buildDetailHTML(sub){
+  return sub.questions.map(q => {
+    const a = sub.answers[q.id] || { text:"(sans réponse)", earned:0, max:q.max, needsManualGrade:false, comment:"" };
+    const badge = q.type==='ungraded' ? '' : (a.needsManualGrade ? '<span class="manual-badge">À corriger</span>' : '<span class="auto-badge">Auto-corrigé</span>');
+    const gradeControls = a.needsManualGrade ? `
+      <div class="grade-row">
+        <label style="font-size:12.5px;color:var(--slate);">Note :</label>
+        <input type="number" min="0" max="${q.max}" value="${a.earned}" id="grade-${sub.id}-${q.id}">
+        <span style="font-size:12.5px;color:var(--slate);">/ ${q.max}</span>
+        <input type="text" placeholder="Commentaire (optionnel)" id="comment-${sub.id}-${q.id}" value="${(a.comment||'').replace(/"/g,'&quot;')}">
+        <button data-sub="${sub.id}" data-q="${q.id}" class="save-grade-btn">Enregistrer</button>
+      </div>` : '';
+    return `
+      <div class="qblock">
+        <div class="qblock-head">
+          <span class="cat-tag" style="background:${CAT_COLORS[q.cat]||'#888'}">${q.catLabel}</span>
+          ${q.type==='ungraded' ? '' : `<span>${a.earned} / ${q.max} pts</span>`} ${badge}
+        </div>
+        <div class="qprompt">Q${q.num}. ${escapeHtml(q.prompt)}</div>
+        <div class="qanswer">${escapeHtml(a.text)}</div>
+        ${gradeControls}
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function attachGradeHandlers(subId){
+  document.querySelectorAll(`#detail-${subId} .save-grade-btn`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const qid = btn.dataset.q;
+      const earnedInput = document.getElementById(`grade-${subId}-${qid}`);
+      const commentInput = document.getElementById(`comment-${subId}-${qid}`);
+      fetch('/api/grade', {
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'x-admin-code': ADMIN_CODE},
+        body: JSON.stringify({ id: subId, qid, earned: Number(earnedInput.value), comment: commentInput.value })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if(res.ok){
+          const idx = submissions.findIndex(s => s.id === subId);
+          if(idx>-1) submissions[idx] = res.submission;
+          renderTable();
+        }
+      });
+    });
+  });
+}
+</script>
+</body>
+</html>
