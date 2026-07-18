@@ -79,7 +79,7 @@
   .list-item:first-child{border-top:none;padding-top:0;}
   .list-item-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
   .list-item-label{font-family:'Newsreader',serif;font-size:16px;font-style:italic;}
-  .mini-btn{font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--paper-2);cursor:pointer;margin-top:8px;}
+  .mini-btn{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--paper-2);cursor:pointer;margin-top:8px;}
   .mini-btn:disabled{opacity:.5;cursor:not-allowed;}
 
   .identity-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
@@ -200,9 +200,9 @@ const QUESTIONS = [
       {label:"« Parce que je le vaux bien »", correct:"L'Oréal", options:["L'Oréal","Pandora","Gemey","Séphora"]},
       {label:"« Das Auto »", correct:"Volkswagen", options:["Volkswagen","Audi","BMW","Mercedes"]},
       {label:"« Vorsprung durch Technik »", correct:"Audi", options:["Volkswagen","Audi","BMW","Mercedes"]},
-      {label:"« C'est toi que j'aime tant »", correct:"Président", options:["Innocent","Bonne Maman","Andros","Président"]},
+      {label:"« C'est toi que j'aime tant »", correct:"Bonne Maman", options:["Innocent","Bonne Maman","Andros","Président"]},
       {label:"« Think different »", correct:"Apple", options:["Sony","Nokia","Apple","Samsung"]},
-      {label:"« La patte de l'expert »", correct:"Royal Canin", options:["Barilla","Feu Vert","Herta","Royal Canin"]},
+      {label:"« La patte de l'expert »", correct:"Feu Vert", options:["Barilla","Feu Vert","Herta","Royal Canin"]},
       {label:"« Faire du ciel le plus bel endroit sur terre »", correct:"Air France", options:["Easyjet","Qatar Airways","Air France","American Express"]},
       {label:"« Vivons la happy technologie »", correct:"Boulanger", options:["Dyson","Darty","Boulanger","LG"]},
       {label:"« Tous unis contre la vie chère »", correct:"E.Leclerc", options:["Intermarché","Boulanger","Emmaüs France","E.Leclerc"]}
@@ -729,7 +729,7 @@ function renderListSlogans(q, body, card){
     row.appendChild(answerZone);
     const aidBtn = document.createElement('button');
     aidBtn.className = 'mini-btn';
-    aidBtn.textContent = 'Avec indice visuel (−1 pt)';
+    aidBtn.textContent = 'Avec indice (−1 pt)';
     aidBtn.addEventListener('click', () => {
       if(aidBtn.disabled) return;
       itemState[ii].level = 'aided';
