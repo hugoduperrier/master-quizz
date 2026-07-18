@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_CODE = process.env.ADMIN_CODE || "prof2026"; // <-- vous pouvez changer ce code ici, ou via une variable d'environnement ADMIN_CODE sur votre hébergeur
+const ADMIN_CODE = (process.env.ADMIN_CODE || "prof2026").trim(); // <-- vous pouvez changer ce code ici, ou via une variable d'environnement ADMIN_CODE sur votre hébergeur
 
 if (!process.env.DATABASE_URL) {
   console.error("ERREUR : la variable d'environnement DATABASE_URL n'est pas définie. Reliez une base de données PostgreSQL à ce service (voir README.md).");
@@ -43,7 +43,7 @@ function rowToRecord(row) {
 }
 
 function requireAdmin(req, res, next) {
-  const code = req.headers['x-admin-code'] || req.query.code;
+  const code = (req.headers['x-admin-code'] || req.query.code || '').toString().trim();
   if (code !== ADMIN_CODE) {
     return res.status(401).json({ error: "Code administrateur invalide." });
   }
@@ -121,7 +121,7 @@ app.delete('/api/submissions/:id', requireAdmin, async (req, res) => {
 
 // --- Admin: CSV export ---
 app.get('/api/export.csv', async (req, res) => {
-  if (req.query.code !== ADMIN_CODE) return res.status(401).send("Code administrateur invalide.");
+  if ((req.query.code || '').toString().trim() !== ADMIN_CODE) return res.status(401).send("Code administrateur invalide.");
   try {
     const result = await pool.query('SELECT * FROM submissions ORDER BY submitted_at DESC');
     const submissions = result.rows.map(rowToRecord);
