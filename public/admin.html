@@ -114,6 +114,7 @@ const TABS = [
   { id:"responses", label:"Réponses individuelles" },
   { id:"byQuestion", label:"Moyenne par question" },
   { id:"byCategory", label:"Moyenne par catégorie" },
+  { id:"byStudentCategory", label:"Par élève et catégorie" },
   { id:"ranking", label:"Classement" }
 ];
 
@@ -130,6 +131,7 @@ function renderCurrentView(){
   if(currentView === 'responses') renderResponsesView();
   else if(currentView === 'byQuestion') renderQuestionAveragesView();
   else if(currentView === 'byCategory') renderCategoryAveragesView();
+  else if(currentView === 'byStudentCategory') renderStudentCategoryView();
   else if(currentView === 'ranking') renderRankingView();
 }
 
@@ -266,7 +268,7 @@ function renderQuestionAveragesView(){
   rows.forEach(r => {
     html += `<tr>
       <td>Q${r.q.num}. ${escapeHtml(r.q.prompt)}</td>
-      <td><span class="cat-tag" style="background:${CAT_COLORS[r.q.cat]||'#888'}">${r.q.catLabel}</span></td>
+      <td>${r.q.cat ? `<span class="cat-tag" style="background:${CAT_COLORS[r.q.cat]||'#888'}">${r.q.catLabel}</span>` : '<span style="color:var(--slate);font-size:12.5px;">—</span>'}</td>
       <td><b>${r.avg.toFixed(1)}</b> / ${r.q.max}</td>
       <td><div class="bar-wrap"><div class="bar-fill" style="width:${r.pct}%"></div></div><span class="pct-label">${r.pct}%</span></td>
       <td>${r.pendingCount > 0 ? `<span class="pending-flag">${r.pendingCount}</span>` : '—'}</td>
@@ -283,7 +285,7 @@ function renderCategoryAveragesView(){
   if(submissions.length === 0){ container.innerHTML = '<p style="color:var(--slate);">Aucune réponse pour le moment.</p>'; return; }
 
   const catLabels = {};
-  submissions[0].questions.forEach(q => { catLabels[q.cat] = q.catLabel; });
+  submissions[0].questions.forEach(q => { if(q.cat) catLabels[q.cat] = q.catLabel; });
   const cats = Object.keys(catLabels);
 
   const rows = cats.map(cat => {
@@ -316,6 +318,45 @@ function renderCategoryAveragesView(){
 }
 
 /* ---------- Classement ---------- */
+/* ---------- Par élève et catégorie ---------- */
+function renderStudentCategoryView(){
+  const container = document.getElementById('viewContainer');
+  document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+  if(submissions.length === 0){ container.innerHTML = '<p style="color:var(--slate);">Aucune réponse pour le moment.</p>'; return; }
+
+  const catLabels = {};
+  submissions[0].questions.forEach(q => { if(q.cat) catLabels[q.cat] = q.catLabel; });
+  const cats = Object.keys(catLabels);
+
+  function catScoreFor(sub, cat){
+    let earned = 0, max = 0;
+    sub.questions.forEach(q => {
+      if(q.cat === cat && q.type !== 'ungraded'){
+        earned += sub.answers[q.id] ? sub.answers[q.id].earned : 0;
+        max += q.max;
+      }
+    });
+    return { earned, max };
+  }
+
+  const sorted = submissions.slice().sort((a,b) => (a.lastName||'').localeCompare(b.lastName||''));
+
+  let html = `<table><thead><tr><th>Nom</th><th>Prénom</th>`;
+  cats.forEach(cat => { html += `<th><span class="cat-tag" style="background:${CAT_COLORS[cat]||'#888'}">${catLabels[cat]}</span></th>`; });
+  html += `<th>Total</th></tr></thead><tbody>`;
+
+  sorted.forEach(sub => {
+    html += `<tr><td>${escapeHtml(sub.lastName)}</td><td>${escapeHtml(sub.firstName)}</td>`;
+    cats.forEach(cat => {
+      const { earned, max } = catScoreFor(sub, cat);
+      html += `<td>${earned} / ${max}</td>`;
+    });
+    html += `<td><b>${computeTotal(sub)}</b> / ${sub.totalMax}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
 function renderRankingView(){
   const container = document.getElementById('viewContainer');
   document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
@@ -341,7 +382,7 @@ function renderRankingView(){
   container.innerHTML = html;
 }
 
-const CAT_COLORS = { culture:"var(--cat-culture)", pub:"var(--cat-pub)", social:"var(--cat-social)", marque:"var(--cat-marque)", manager:"var(--cat-manager)" };
+const CAT_COLORS = { culture:"var(--cat-culture)", pub:"var(--cat-pub)", marque:"var(--cat-marque)" };
 
 function buildDetailHTML(sub){
   return sub.questions.map(q => {
@@ -358,7 +399,7 @@ function buildDetailHTML(sub){
     return `
       <div class="qblock">
         <div class="qblock-head">
-          <span class="cat-tag" style="background:${CAT_COLORS[q.cat]||'#888'}">${q.catLabel}</span>
+          ${q.cat ? `<span class="cat-tag" style="background:${CAT_COLORS[q.cat]||'#888'}">${q.catLabel}</span>` : '<span style="color:var(--slate);font-size:11px;">Non catégorisé</span>'}
           ${q.type==='ungraded' ? '' : `<span>${a.earned} / ${q.max} pts</span>`} ${badge}
         </div>
         <div class="qprompt">Q${q.num}. ${escapeHtml(q.prompt)}</div>

@@ -62,8 +62,8 @@
   .opt-label.picked{border-color:var(--ink-2);background:var(--paper-2);}
 
   .actions-row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;}
-  .btn-blue{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;border:none;background:#2454E8;color:#fff;cursor:pointer;}
-  .btn-blue:hover:not(:disabled){background:#1c41c2;}
+  .btn-blue{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;border:none;background:#C7FF4D;color:var(--ink);cursor:pointer;}
+  .btn-blue:hover:not(:disabled){background:#b8f22e;}
   .btn-blue:disabled{opacity:.4;cursor:not-allowed;}
   .btn-ghost{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;border:1.5px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer;}
 
@@ -134,17 +134,15 @@
 <script>
 const CATS = {
   culture:  {label:"Culture générale", color:"var(--cat-culture)"},
-  pub:      {label:"Créativité & pub", color:"var(--cat-pub)"},
-  social:   {label:"Réseaux sociaux", color:"var(--cat-social)"},
-  marque:   {label:"Marques", color:"var(--cat-marque)"},
-  manager:  {label:"Management", color:"var(--cat-manager)"}
+  pub:      {label:"Culture Pub", color:"var(--cat-pub)"},
+  marque:   {label:"Culture de marque", color:"var(--cat-marque)"}
 };
 
 const QUESTIONS = [
   { id:"q1", cat:"culture", type:"open", points:10,
     prompt:"Quel événement récent vous semble le plus marquant de l'actualité internationale ? Pourquoi ?" },
 
-  { id:"q2", cat:"marque", type:"aided",
+  { id:"q2", cat:"culture", type:"aided",
     prompt:"Quelle grande cause est associée au mois d'octobre ?",
     levels:[
       {label:"Je réponds sans aide", points:10, type:"text"},
@@ -157,7 +155,7 @@ const QUESTIONS = [
   { id:"q3", cat:"culture", type:"open", points:10,
     prompt:"Selon vous, quels sont les principaux risques liés à l'utilisation de l'I.A en communication ?" },
 
-  { id:"q4", cat:"social", type:"aided",
+  { id:"q4", cat:"culture", type:"aided",
     prompt:"Que signifie l'expression « POV » sur TikTok ?",
     levels:[
       {label:"Je réponds sans aide", points:10, type:"text"},
@@ -231,7 +229,7 @@ const QUESTIONS = [
     ],
     autoCheckKeywords:["patagonia"] },
 
-  { id:"q12", cat:"marque", type:"aided",
+  { id:"q12", cat:"pub", type:"aided",
     prompt:"Quelle marque est associée à la signature sonore « Ta-dum » ?",
     levels:[
       {label:"Je réponds sans aide", points:10, type:"text"},
@@ -259,7 +257,7 @@ const QUESTIONS = [
       "E. Babette, je la prends, je la fouette (Babette/Candia)","F. 20 cm de pur bonheur (Morteau Saucisse)"
     ] },
 
-  { id:"q10", cat:"marque", type:"aided",
+  { id:"q10", cat:"pub", type:"aided",
     prompt:"Quelle marque utilise le « swoosh » dans son logo ?",
     levels:[
       {label:"Je réponds sans aide", points:10, type:"text"},
@@ -269,7 +267,7 @@ const QUESTIONS = [
     ],
     autoCheckKeywords:["nike"] },
 
-  { id:"stars", cat:"social", type:"listOpen",
+  { id:"stars", cat:"marque", type:"listOpen",
     prompt:"Citez au moins une marque représentée par chacune de ces personnalités.",
     items:[
       {label:"Rihanna", points:2},{label:"Jean Dujardin", points:2},{label:"Inoxtag", points:2},
@@ -278,7 +276,7 @@ const QUESTIONS = [
       {label:"Kendall Jenner", points:2},{label:"Aya Nakamura", points:2}
     ] },
 
-  { id:"artists", cat:"pub", type:"matching",
+  { id:"artists", cat:"marque", type:"matching",
     prompt:"Reliez chaque artiste à la marque avec laquelle il/elle a collaboré.",
     note:"Cliquez un artiste puis la marque correspondante pour tracer le trait. 2 points par bonne association.",
     left:["Victor Vasarely","Salvador Dalí","Keith Haring","Andy Warhol","Jeff Koons"],
@@ -286,19 +284,19 @@ const QUESTIONS = [
     pairs:{"Victor Vasarely":"Renault","Salvador Dalí":"Chupa Chups","Keith Haring":"Swatch","Andy Warhol":"Campbell's Soup","Jeff Koons":"Louis Vuitton"},
     pointsEach:2 },
 
-  { id:"q15", cat:"manager", type:"open", points:10,
+  { id:"q15", cat:"pub", type:"open", points:10,
     prompt:"Comment feriez-vous parler une marque… sans utiliser de publicité ? (Donnez au moins 3 idées)" },
 
-  { id:"q16", cat:"pub", type:"open", points:10,
+  { id:"q16", cat:"marque", type:"open", points:10,
     prompt:"Si Amazon était une personne, comment la décririez-vous ?" },
 
   { id:"q17", cat:"pub", type:"open", points:10,
     prompt:"Expliquez pourquoi la publicité Volkswagen reprenant les codes visuels de Superman est simple et efficace." },
 
-  { id:"q18", cat:"manager", type:"open", points:10,
+  { id:"q18", cat:null, type:"open", points:10,
     prompt:"Selon vous, quelles qualités humaines sont essentielles aujourd'hui pour manager une équipe ?" },
 
-  { id:"q19", cat:"manager", type:"ungraded",
+  { id:"q19", cat:null, type:"ungraded",
     prompt:"Pourquoi souhaiteriez-vous travailler dans les métiers de la communication et qu'attendez-vous de cette formation ?" }
 ];
 
@@ -447,7 +445,8 @@ function renderQuestion(q, num, slideIdx){
   const head = document.createElement('div');
   head.className = 'qcard-head';
   const max = maxPossible(q);
-  head.innerHTML = `<span class="cat-tag" style="background:${CATS[q.cat].color}">${CATS[q.cat].label}</span>
+  const catTag = q.cat ? `<span class="cat-tag" style="background:${CATS[q.cat].color}">${CATS[q.cat].label}</span>` : '';
+  head.innerHTML = `${catTag}
     <span class="points-chip" id="chip-${q.id}">${q.type==='ungraded' ? 'Non noté' : '/ '+max+' pts'}</span>`;
   card.appendChild(head);
 
@@ -965,7 +964,7 @@ async function submitQuiz(){
   btn.disabled = true; btn.textContent = "Envoi en cours…";
 
   const questionsMeta = QUESTIONS.map((q,i) => ({
-    id:q.id, num:i+1, cat:q.cat, catLabel:CATS[q.cat].label, prompt:q.prompt, type:q.type, max:maxPossible(q)
+    id:q.id, num:i+1, cat:q.cat, catLabel:q.cat ? CATS[q.cat].label : null, prompt:q.prompt, type:q.type, max:maxPossible(q)
   }));
   const answers = {};
   QUESTIONS.forEach(q => {
