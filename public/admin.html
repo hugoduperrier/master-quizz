@@ -23,6 +23,7 @@
   #gateScreen{max-width:360px;margin:80px auto;text-align:center;}
   #gateScreen input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;margin:12px 0;}
   #gateScreen button{width:100%;padding:10px;border-radius:8px;border:none;background:var(--ink-2);color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:600;cursor:pointer;}
+  #gateScreen .show-pw-btn{width:auto;display:block;margin:0 auto 8px;padding:6px 12px;background:transparent;border:1.5px solid var(--line);color:var(--ink-2);font-size:12.5px;font-weight:600;}
   #gateError{color:var(--coral);font-size:13px;min-height:18px;}
 
   .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
@@ -51,6 +52,16 @@
   .grade-row button{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid var(--ink-2);background:var(--ink-2);color:#fff;cursor:pointer;}
   .auto-badge{font-size:11px;font-weight:700;color:#1E7A46;background:#E9F7EE;padding:2px 8px;border-radius:20px;}
   .manual-badge{font-size:11px;font-weight:700;color:var(--coral);background:#FFECE7;padding:2px 8px;border-radius:20px;}
+
+  .tab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab-btn{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--slate);cursor:pointer;}
+  .tab-btn.active{background:var(--ink-2);color:#fff;border-color:var(--ink-2);}
+  .delete-btn{font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--coral);background:#fff;color:var(--coral);cursor:pointer;}
+  .delete-btn:hover{background:#FFECE7;}
+  .rank-badge{font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--ink-2);}
+  .bar-wrap{background:var(--paper-2);border-radius:6px;height:8px;width:160px;overflow:hidden;}
+  .bar-fill{background:var(--ink-2);height:100%;}
+  .pct-label{font-size:12.5px;color:var(--slate);margin-left:8px;}
 </style>
 </head>
 <body>
@@ -58,6 +69,7 @@
 <div id="gateScreen">
   <h2>Tableau de bord correcteur</h2>
   <input type="password" id="adminCodeInput" placeholder="Code correcteur">
+  <button class="show-pw-btn" type="button" onclick="togglePwVisibility()" id="showPwBtn">👁 Afficher le mot de passe</button>
   <button onclick="tryLogin()">Accéder</button>
   <p id="gateError"></p>
 </div>
@@ -75,10 +87,8 @@
         <a class="btn primary" id="exportBtn" href="#">⬇ Exporter en CSV</a>
       </div>
     </div>
-    <table>
-      <thead><tr><th>Nom</th><th>Prénom</th><th>Date</th><th>Score</th><th>Statut</th><th></th></tr></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+    <div class="tab-bar" id="tabBar"></div>
+    <div id="viewContainer"></div>
   </main>
 </div>
 
@@ -86,9 +96,45 @@
 let ADMIN_CODE = "";
 let submissions = [];
 let expandedId = null;
+let currentView = "responses";
+
+function togglePwVisibility(){
+  const input = document.getElementById('adminCodeInput');
+  const btn = document.getElementById('showPwBtn');
+  if(input.type === 'password'){
+    input.type = 'text';
+    btn.textContent = '🙈 Masquer le mot de passe';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁 Afficher le mot de passe';
+  }
+}
+
+const TABS = [
+  { id:"responses", label:"Réponses individuelles" },
+  { id:"byQuestion", label:"Moyenne par question" },
+  { id:"byCategory", label:"Moyenne par catégorie" },
+  { id:"ranking", label:"Classement" }
+];
+
+function renderTabBar(){
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = TABS.map(t => `<button class="tab-btn${currentView===t.id?' active':''}" onclick="switchView('${t.id}')">${t.label}</button>`).join('');
+}
+function switchView(view){
+  currentView = view;
+  renderTabBar();
+  renderCurrentView();
+}
+function renderCurrentView(){
+  if(currentView === 'responses') renderResponsesView();
+  else if(currentView === 'byQuestion') renderQuestionAveragesView();
+  else if(currentView === 'byCategory') renderCategoryAveragesView();
+  else if(currentView === 'ranking') renderRankingView();
+}
 
 function tryLogin(){
-  const code = document.getElementById('adminCodeInput').value;
+  const code = document.getElementById('adminCodeInput').value.trim();
   fetch('/api/submissions', { headers: { 'x-admin-code': code } })
     .then(r => {
       if(!r.ok) throw new Error("bad code");
@@ -101,7 +147,8 @@ function tryLogin(){
       document.getElementById('gateScreen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('exportBtn').href = '/api/export.csv?code=' + encodeURIComponent(code);
-      renderTable();
+      renderTabBar();
+      renderCurrentView();
     })
     .catch(() => {
       document.getElementById('gateError').textContent = "Code incorrect.";
@@ -120,7 +167,7 @@ window.addEventListener('load', () => {
 function loadSubmissions(){
   fetch('/api/submissions', { headers: { 'x-admin-code': ADMIN_CODE } })
     .then(r => r.json())
-    .then(data => { submissions = data; renderTable(); });
+    .then(data => { submissions = data; renderCurrentView(); });
 }
 
 function computeTotal(sub){
@@ -130,10 +177,15 @@ function hasPending(sub){
   return Object.values(sub.answers).some(a => a.needsManualGrade);
 }
 
-function renderTable(){
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
+function renderResponsesView(){
+  const container = document.getElementById('viewContainer');
   document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Nom</th><th>Prénom</th><th>Date</th><th>Score</th><th>Statut</th><th></th><th></th></tr></thead><tbody id="tableBody"></tbody>`;
+  container.innerHTML = '';
+  container.appendChild(table);
+  const tbody = table.querySelector('#tableBody');
 
   submissions
     .slice()
@@ -143,18 +195,26 @@ function renderTable(){
       tr.className = 'student-row';
       const total = computeTotal(sub);
       tr.innerHTML = `
-        <td>${sub.lastName}</td>
-        <td>${sub.firstName}</td>
+        <td>${escapeHtml(sub.lastName)}</td>
+        <td>${escapeHtml(sub.firstName)}</td>
         <td>${new Date(sub.submittedAt).toLocaleString('fr-FR')}</td>
         <td class="score-cell"><b>${total}</b> / ${sub.totalMax}</td>
         <td>${hasPending(sub) ? '<span class="pending-flag">À corriger</span>' : '✓ Complet'}</td>
-        <td>▾</td>`;
-      tr.addEventListener('click', () => toggleDetail(sub.id));
+        <td>▾</td>
+        <td><button class="delete-btn" data-id="${sub.id}">🗑 Supprimer</button></td>`;
+      tr.addEventListener('click', (e) => {
+        if(e.target.closest('.delete-btn')) return;
+        toggleDetail(sub.id);
+      });
+      tr.querySelector('.delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteSubmission(sub.id, `${sub.firstName} ${sub.lastName}`);
+      });
       tbody.appendChild(tr);
 
       const detailTr = document.createElement('tr');
       const detailTd = document.createElement('td');
-      detailTd.colSpan = 6;
+      detailTd.colSpan = 7;
       detailTd.style.padding = '0';
       const panel = document.createElement('div');
       panel.className = 'detail-panel';
@@ -169,9 +229,116 @@ function renderTable(){
   if(expandedId) attachGradeHandlers(expandedId);
 }
 
+function deleteSubmission(id, name){
+  if(!confirm(`Supprimer définitivement la réponse de ${name} ? Cette action est irréversible.`)) return;
+  fetch('/api/submissions/'+id, { method:'DELETE', headers:{'x-admin-code': ADMIN_CODE} })
+    .then(r => r.json())
+    .then(res => {
+      if(res.ok){
+        submissions = submissions.filter(s => s.id !== id);
+        if(expandedId === id) expandedId = null;
+        renderCurrentView();
+      }
+    });
+}
+
 function toggleDetail(id){
   expandedId = (expandedId === id) ? null : id;
-  renderTable();
+  renderResponsesView();
+}
+
+/* ---------- Moyenne par question ---------- */
+function renderQuestionAveragesView(){
+  const container = document.getElementById('viewContainer');
+  document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+  if(submissions.length === 0){ container.innerHTML = '<p style="color:var(--slate);">Aucune réponse pour le moment.</p>'; return; }
+
+  const questions = submissions[0].questions.filter(q => q.type !== 'ungraded');
+  const rows = questions.map(q => {
+    const values = submissions.map(s => s.answers[q.id] ? s.answers[q.id].earned : 0);
+    const pendingCount = submissions.filter(s => s.answers[q.id] && s.answers[q.id].needsManualGrade).length;
+    const avg = values.reduce((a,b)=>a+b,0) / values.length;
+    const pct = q.max ? Math.round((avg / q.max) * 100) : 0;
+    return { q, avg, pct, pendingCount };
+  });
+
+  let html = `<table><thead><tr><th>Question</th><th>Catégorie</th><th>Moyenne</th><th></th><th>À corriger</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td>Q${r.q.num}. ${escapeHtml(r.q.prompt)}</td>
+      <td><span class="cat-tag" style="background:${CAT_COLORS[r.q.cat]||'#888'}">${r.q.catLabel}</span></td>
+      <td><b>${r.avg.toFixed(1)}</b> / ${r.q.max}</td>
+      <td><div class="bar-wrap"><div class="bar-fill" style="width:${r.pct}%"></div></div><span class="pct-label">${r.pct}%</span></td>
+      <td>${r.pendingCount > 0 ? `<span class="pending-flag">${r.pendingCount}</span>` : '—'}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+/* ---------- Moyenne par catégorie ---------- */
+function renderCategoryAveragesView(){
+  const container = document.getElementById('viewContainer');
+  document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+  if(submissions.length === 0){ container.innerHTML = '<p style="color:var(--slate);">Aucune réponse pour le moment.</p>'; return; }
+
+  const catLabels = {};
+  submissions[0].questions.forEach(q => { catLabels[q.cat] = q.catLabel; });
+  const cats = Object.keys(catLabels);
+
+  const rows = cats.map(cat => {
+    const perSubmission = submissions.map(sub => {
+      let earned = 0, max = 0;
+      sub.questions.forEach(q => {
+        if(q.cat === cat && q.type !== 'ungraded'){
+          earned += sub.answers[q.id] ? sub.answers[q.id].earned : 0;
+          max += q.max;
+        }
+      });
+      return { earned, max };
+    });
+    const avgEarned = perSubmission.reduce((s,p)=>s+p.earned,0) / perSubmission.length;
+    const maxPerStudent = perSubmission[0] ? perSubmission[0].max : 0;
+    const pct = maxPerStudent ? Math.round((avgEarned / maxPerStudent) * 100) : 0;
+    return { cat, label: catLabels[cat], avgEarned, maxPerStudent, pct };
+  });
+
+  let html = `<table><thead><tr><th>Catégorie</th><th>Moyenne</th><th></th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td><span class="cat-tag" style="background:${CAT_COLORS[r.cat]||'#888'}">${r.label}</span></td>
+      <td><b>${r.avgEarned.toFixed(1)}</b> / ${r.maxPerStudent}</td>
+      <td><div class="bar-wrap"><div class="bar-fill" style="width:${r.pct}%"></div></div><span class="pct-label">${r.pct}%</span></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+/* ---------- Classement ---------- */
+function renderRankingView(){
+  const container = document.getElementById('viewContainer');
+  document.getElementById('statsLine').textContent = `${submissions.length} réponse(s) reçue(s)`;
+  if(submissions.length === 0){ container.innerHTML = '<p style="color:var(--slate);">Aucune réponse pour le moment.</p>'; return; }
+
+  const ranked = submissions
+    .map(s => ({ s, total: computeTotal(s) }))
+    .sort((a,b) => b.total - a.total);
+
+  let html = `<table><thead><tr><th>#</th><th>Nom</th><th>Prénom</th><th>Score</th><th></th><th>Statut</th></tr></thead><tbody>`;
+  ranked.forEach((r, i) => {
+    const pct = r.s.totalMax ? Math.round((r.total / r.s.totalMax) * 100) : 0;
+    html += `<tr>
+      <td class="rank-badge">${i+1}</td>
+      <td>${escapeHtml(r.s.lastName)}</td>
+      <td>${escapeHtml(r.s.firstName)}</td>
+      <td><b>${r.total}</b> / ${r.s.totalMax}</td>
+      <td><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div><span class="pct-label">${pct}%</span></td>
+      <td>${hasPending(r.s) ? '<span class="pending-flag">À corriger</span>' : '✓ Complet'}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 }
 
 const CAT_COLORS = { culture:"var(--cat-culture)", pub:"var(--cat-pub)", social:"var(--cat-social)", marque:"var(--cat-marque)", manager:"var(--cat-manager)" };
